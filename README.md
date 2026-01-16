@@ -1,6 +1,14 @@
 # Chat API - Sistema de Suporte em Tempo Real
 
-API completa para sistema de chat em tempo real com suporte a e-commerce.
+API completa para sistema de chat em tempo real.
+
+repositório: [https://github.com/logicinfocursos/chat_api_16jan26.git](https://github.com/logicinfocursos/chat_api_16jan26.git)
+
+# Telas do projeto
+<img src="https://github.com/logicinfocursos/chat_api_16jan26/blob/main/assets/images/monitoramento.jpg?raw=true"/>
+<img src="https://github.com/logicinfocursos/chat_api_16jan26/blob/main/assets/images/monitoramento2.jpg?raw=true"/>
+<img src="https://github.com/logicinfocursos/chat_api_16jan26/blob/main/assets/images/sendmensageTest.jpg?raw=true"/>
+<img src="https://github.com/logicinfocursos/chat_api_16jan26/blob/main/assets/images/testCors.jpg?raw=true"/>
 
 ## 📋 Requisitos
 
