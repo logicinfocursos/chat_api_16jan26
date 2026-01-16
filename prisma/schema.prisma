@@ -1,0 +1,59 @@
+// Schema do banco de dados para o sistema de chat
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  conversations Conversation[]
+  @@map("users")
+}
+
+model Agent {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  conversations Conversation[]
+  @@map("agents")
+}
+
+model Conversation {
+  id          String    @id @default(uuid())
+  userId      String
+  agentId     String?
+  status      String    @default("open")
+  subject     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  closedAt    DateTime?
+  assignedAt  DateTime?
+  user  User       @relation(fields: [userId], references: [id])
+  agent Agent?     @relation(fields: [agentId], references: [id])
+  messages Message[]
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderType     String
+  senderId       String?
+  content        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  @@map("messages")
+}

@@ -1,0 +1,25 @@
+{
+  "server": {
+    "port": 3000,
+    "host": "localhost"
+  },
+  "websocket": {
+    "path": "/socket.io",
+    "cors": {
+      "origin": "*",
+      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allowedHeaders": ["Content-Type", "Authorization"]
+    },
+    "pingTimeout": 60000,
+    "pingInterval": 25000
+  },
+  "chat": {
+    "maxMessageLength": 5000,
+    "inactiveTimeout": 300000,
+    "autoCloseInactiveChats": true
+  },
+  "monitoring": {
+    "enabled": true,
+    "logLevel": "info"
+  }
+}

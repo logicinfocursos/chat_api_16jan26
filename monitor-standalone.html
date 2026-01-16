@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monitoramento Chat API - Standalone</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: white;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .url-config {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .url-config label {
+        font-weight: 600;
+        color: #333;
+      }
+
+      .url-config input {
+        flex: 1;
+        padding: 10px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      .url-config button {
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+      }
+
+      .stat-card h3 {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 10px;
+      }
+
+      .stat-card .value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #667eea;
+      }
+
+      .monitor-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 1200px) {
+        .monitor-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .monitor-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .monitor-panel {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        min-height: 500px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel-header {
+        background: #667eea;
+        color: white;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .panel-header h2 {
+        font-size: 16px;
+        margin: 0;
+      }
+
+      .clear-btn {
+        background: #f44336;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .clear-btn:hover {
+        background: #d32f2f;
+      }
+
+      .panel-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        background: #f8f9fa;
+      }
+
+      .message-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .message-item {
+        background: white;
+        padding: 12px;
+        border-radius: 6px;
+        border-left: 4px solid;
+      }
+
+      .message-item.user {
+        border-color: #4caf50;
+      }
+
+      .message-item.agent {
+        border-color: #2196f3;
+      }
+
+      .message-item.ai {
+        border-color: #ff9800;
+      }
+
+      .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+        color: #666;
+      }
+
+      .message-type {
+        font-weight: bold;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
+
+      .message-type.user {
+        background: #e8f5e9;
+        color: #4caf50;
+      }
+
+      .message-type.agent {
+        background: #e3f2fd;
+        color: #2196f3;
+      }
+
+      .message-type.ai {
+        background: #fff3e0;
+        color: #ff9800;
+      }
+
+      .message-content {
+        font-size: 14px;
+        color: #333;
+        word-wrap: break-word;
+      }
+
+      .log-entry {
+        padding: 8px;
+        margin-bottom: 5px;
+        border-radius: 4px;
+        background: white;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border-left: 3px solid #666;
+      }
+
+      .log-entry.connection {
+        border-color: #4caf50;
+      }
+
+      .log-entry.error {
+        border-color: #f44336;
+      }
+
+      .connection-item {
+        background: white;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #4caf50;
+      }
+
+      .connection-info {
+        flex: 1;
+      }
+
+      .connection-type {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: #667eea;
+        color: white;
+      }
+
+      .empty-state {
+        text-align: center;
+        color: #999;
+        padding: 40px;
+      }
+
+      .status {
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .status.ok {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .timestamp {
+        font-size: 11px;
+        color: #999;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔍 Monitoramento Chat API - Standalone</h1>
+
+    <div class="url-config">
+      <label>URL da API:</label>
+      <input type="text" id="apiUrl" value="http://localhost:3000" />
+      <button onclick="setApiUrl()">Atualizar</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Total Conexões</h3>
+        <div class="value" id="totalConnections">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Usuários Online</h3>
+        <div class="value" id="onlineUsers">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Agentes Online</h3>
+        <div class="value" id="onlineAgents">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Mensagens</h3>
+        <div class="value" id="messageCount">0</div>
+      </div>
+    </div>
+
+    <div class="monitor-grid">
+      <div class="monitor-panel">
+        <div class="panel-header">
+          <h2>💬 Mensagens</h2>
+          <button class="clear-btn" onclick="clearMessages()">Limpar</button>
+        </div>
+        <div class="panel-content" id="messagesPanel">
+          <div class="empty-state">Aguardando mensagens...</div>
+        </div>
+      </div>
+
+      <div class="monitor-panel">
+        <div class="panel-header">
+          <h2>📋 Status</h2>
+        </div>
+        <div class="panel-content">
+          <div id="systemStatus" class="status ok">✅ API funcionando</div>
+        </div>
+      </div>
+
+      <div class="monitor-panel">
+        <div class="panel-header">
+          <h2>👥 Conexões</h2>
+        </div>
+        <div class="panel-content" id="connectionsContent">
+          <div class="empty-state">Nenhuma conexão ativa</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let apiUrl = 'http://localhost:3000'
+      let messages = []
+
+      function setApiUrl() {
+        apiUrl = document.getElementById('apiUrl').value
+        addLog('info', 'URL da API atualizada para: ' + apiUrl)
+        checkStatus()
+      }
+
+      async function checkStatus() {
+        try {
+          const response = await fetch(apiUrl + '/')
+          await response.json()
+          document.getElementById('systemStatus').className = 'status ok'
+          document.getElementById('systemStatus').textContent =
+            '✅ API funcionando'
+          return true
+        } catch (error) {
+          document.getElementById('systemStatus').className = 'status error'
+          document.getElementById('systemStatus').textContent =
+            '❌ API offline: ' + error.message
+          addLog('error', 'Erro ao conectar API: ' + error.message)
+          return false
+        }
+      }
+
+      async function fetchStats() {
+        try {
+          const response = await fetch(apiUrl + '/api/monitor/stats')
+          const stats = await response.json()
+
+          document.getElementById('totalConnections').textContent =
+            stats.totalSockets || 0
+          document.getElementById('onlineUsers').textContent = (
+            stats.users || []
+          ).length
+          document.getElementById('onlineAgents').textContent = (
+            stats.agents || []
+          ).length
+
+          updateConnections(stats)
+        } catch (error) {
+          addLog('error', 'Erro ao buscar estatísticas: ' + error.message)
+        }
+      }
+
+      async function fetchMessages() {
+        try {
+          const response = await fetch(apiUrl + '/api/monitor/messages')
+          messages = await response.json()
+
+          document.getElementById('messageCount').textContent = messages.length
+          displayMessages(messages)
+        } catch (error) {
+          addLog('error', 'Erro ao buscar mensagens: ' + error.message)
+        }
+      }
+
+      function displayMessages(msgList) {
+        const panel = document.getElementById('messagesPanel')
+
+        if (!msgList || msgList.length === 0) {
+          panel.innerHTML =
+            '<div class="empty-state">Aguardando mensagens...</div>'
+          return
+        }
+
+        panel.innerHTML = '<div class="message-list"></div>'
+        const list = panel.querySelector('.message-list')
+
+        msgList.forEach(function (msg) {
+          const item = document.createElement('div')
+          item.className = 'message-item ' + (msg.senderType || 'user')
+
+          const timestamp = new Date(msg.timestamp).toLocaleString('pt-BR')
+
+          item.innerHTML =
+            '<div class="message-header">' +
+            '<span class="message-type ' +
+            (msg.senderType || 'user') +
+            '">' +
+            (msg.senderType || 'USER') +
+            '</span>' +
+            '<span class="timestamp">' +
+            timestamp +
+            '</span>' +
+            '</div>' +
+            '<div class="message-content">' +
+            (msg.content || '') +
+            '</div>'
+
+          list.appendChild(item)
+        })
+      }
+
+      function updateConnections(stats) {
+        const panel = document.getElementById('connectionsContent')
+
+        const users = stats.users || []
+        const agents = stats.agents || []
+
+        if (users.length === 0 && agents.length === 0) {
+          panel.innerHTML =
+            '<div class="empty-state">Nenhuma conexão ativa</div>'
+          return
+        }
+
+        panel.innerHTML = ''
+
+        users.forEach(function (userId) {
+          const item = document.createElement('div')
+          item.className = 'connection-item'
+          item.innerHTML =
+            '<div class="status-dot"></div>' +
+            '<div class="connection-info">' +
+            '<strong>' +
+            userId +
+            '</strong>' +
+            '<span class="connection-type">USUÁRIO</span>' +
+            '</div>'
+          panel.appendChild(item)
+        })
+
+        agents.forEach(function (agentId) {
+          const item = document.createElement('div')
+          item.className = 'connection-item'
+          item.innerHTML =
+            '<div class="status-dot"></div>' +
+            '<div class="connection-info">' +
+            '<strong>' +
+            agentId +
+            '</strong>' +
+            '<span class="connection-type">AGENTE</span>' +
+            '</div>'
+          panel.appendChild(item)
+        })
+      }
+
+      async function clearMessages() {
+        try {
+          await fetch(apiUrl + '/api/monitor/messages/clear', {
+            method: 'DELETE',
+          })
+          document.getElementById('messagesPanel').innerHTML =
+            '<div class="empty-state">Histórico limpo</div>'
+          document.getElementById('messageCount').textContent = '0'
+          messages = []
+          addLog('info', 'Histórico de mensagens limpo')
+        } catch (error) {
+          addLog('error', 'Erro ao limpar mensagens: ' + error.message)
+        }
+      }
+
+      function addLog(type, message) {
+        const timestamp = new Date().toLocaleTimeString('pt-BR')
+        console.log(
+          '[' + timestamp + '] [' + type.toUpperCase() + '] ' + message
+        )
+      }
+
+      function startMonitoring() {
+        checkStatus()
+        fetchStats()
+        fetchMessages()
+
+        setInterval(function () {
+          checkStatus()
+          fetchStats()
+          fetchMessages()
+        }, 2000)
+      }
+
+      startMonitoring()
+    </script>
+  </body>
+</html>

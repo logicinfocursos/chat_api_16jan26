@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste CORS Chat API</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .test-section h2 {
+        margin-top: 0;
+        color: #555;
+      }
+      button {
+        padding: 10px 20px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .result {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .logs {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🧪 Teste CORS - Chat API</h1>
+
+      <div class="test-section">
+        <h2>📡 Testar Conexão WebSocket</h2>
+        <button onclick="testWebSocket()">Conectar WebSocket</button>
+        <div id="ws-result" class="result"></div>
+      </div>
+
+      <div class="test-section">
+        <h2>📝 Criar Usuário (POST)</h2>
+        <button onclick="createUser()">Criar Usuário Teste</button>
+        <div id="user-result" class="result"></div>
+      </div>
+
+      <div class="test-section">
+        <h2>👥 Listar Usuários (GET)</h2>
+        <button onclick="getUsers()">Listar Usuários</button>
+        <div id="list-result" class="result"></div>
+      </div>
+
+      <div class="test-section">
+        <h2>📊 Status do Servidor</h2>
+        <button onclick="checkServer()">Verificar Status</button>
+        <div id="server-result" class="result"></div>
+      </div>
+
+      <div class="logs">
+        <h3>📋 Logs</h3>
+        <div id="logs"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script>
+      const API_URL = 'http://localhost:3000'
+      let socket = null
+
+      function log(message, type = 'info') {
+        const logsDiv = document.getElementById('logs')
+        const timestamp = new Date().toLocaleTimeString()
+        const logEntry = document.createElement('div')
+        logEntry.style.marginBottom = '5px'
+        logEntry.style.padding = '5px'
+
+        switch (type) {
+          case 'error':
+            logEntry.style.color = 'red'
+            break
+          case 'success':
+            logEntry.style.color = 'green'
+            break
+          default:
+            logEntry.style.color = 'blue'
+        }
+
+        logEntry.textContent = `[${timestamp}] ${message}`
+        logsDiv.appendChild(logEntry)
+        logsDiv.scrollTop = logsDiv.scrollHeight
+      }
+
+      function showResult(elementId, message, type) {
+        const resultDiv = document.getElementById(elementId)
+        resultDiv.className = 'result ' + type
+        resultDiv.textContent = message
+      }
+
+      async function testWebSocket() {
+        try {
+          log('Tentando conectar ao WebSocket...')
+
+          if (socket) {
+            socket.disconnect()
+          }
+
+          socket = io(API_URL, {
+            path: '/socket.io',
+            transports: ['websocket', 'polling'],
+            auth: {
+              type: 'user',
+              id: 'test-user-' + Date.now(),
+            },
+          })
+
+          socket.on('connect', () => {
+            const message = 'WebSocket conectado! Socket ID: ' + socket.id
+            log(message, 'success')
+            showResult('ws-result', message, 'success')
+          })
+
+          socket.on('connect_error', (error) => {
+            const message = 'Erro na conexão WebSocket: ' + error.message
+            log(message, 'error')
+            showResult('ws-result', message, 'error')
+          })
+
+          socket.on('error', (error) => {
+            const message = 'Erro no WebSocket: ' + JSON.stringify(error)
+            log(message, 'error')
+            showResult('ws-result', message, 'error')
+          })
+
+          socket.on('connected', (data) => {
+            log('Mensagem recebida: ' + JSON.stringify(data), 'success')
+          })
+        } catch (error) {
+          const message = 'Erro ao testar WebSocket: ' + error.message
+          log(message, 'error')
+          showResult('ws-result', message, 'error')
+        }
+      }
+
+      async function createUser() {
+        try {
+          log('Enviando requisição POST para criar usuário...')
+
+          const response = await fetch(API_URL + '/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: 'teste' + Date.now() + '@example.com',
+              name: 'Usuário de Teste',
+            }),
+          })
+
+          const data = await response.json()
+
+          if (response.ok) {
+            const message = 'Usuário criado com sucesso! ID: ' + data.id
+            log(message, 'success')
+            showResult(
+              'user-result',
+              message + '\n' + JSON.stringify(data, null, 2),
+              'success'
+            )
+          } else {
+            const message = 'Erro ao criar usuário: ' + JSON.stringify(data)
+            log(message, 'error')
+            showResult('user-result', message, 'error')
+          }
+        } catch (error) {
+          const message = 'Erro na requisição: ' + error.message
+          log(message, 'error')
+          showResult('user-result', message, 'error')
+        }
+      }
+
+      async function getUsers() {
+        try {
+          log('Enviando requisição GET para listar usuários...')
+
+          const response = await fetch(API_URL + '/api/users')
+          const data = await response.json()
+
+          if (response.ok) {
+            const message = 'Sucesso! ' + data.length + ' usuários encontrados'
+            log(message, 'success')
+            showResult(
+              'list-result',
+              message + '\n' + JSON.stringify(data, null, 2),
+              'success'
+            )
+          } else {
+            const message = 'Erro ao listar usuários: ' + JSON.stringify(data)
+            log(message, 'error')
+            showResult('list-result', message, 'error')
+          }
+        } catch (error) {
+          const message = 'Erro na requisição: ' + error.message
+          log(message, 'error')
+          showResult('list-result', message, 'error')
+        }
+      }
+
+      async function checkServer() {
+        try {
+          log('Verificando status do servidor...')
+
+          const response = await fetch(API_URL + '/')
+          const data = await response.json()
+
+          const message = 'Servidor online! ' + JSON.stringify(data)
+          log(message, 'success')
+          showResult('server-result', message, 'success')
+        } catch (error) {
+          const message = 'Erro ao conectar ao servidor: ' + error.message
+          log(message, 'error')
+          showResult('server-result', message, 'error')
+        }
+      }
+
+      // Auto-check server on load
+      checkServer()
+    </script>
+  </body>
+</html>

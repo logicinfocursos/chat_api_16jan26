@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste WebSocket - Chat API</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        color: white;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .panel {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      }
+
+      .panel h2 {
+        color: #333;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #667eea;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #555;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      button {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      button.danger {
+        background: linear-gradient(135deg, #f44336 0%, #e53935 100%);
+      }
+
+      button.danger:hover {
+        box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+      }
+
+      button.success {
+        background: linear-gradient(135deg, #4caf50 0%, #43a047 100%);
+      }
+
+      button.success:hover {
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+      }
+
+      .status {
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .status.connected {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status.disconnected {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .messages {
+        height: 400px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+      }
+
+      .message {
+        padding: 12px 15px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid;
+      }
+
+      .message.user {
+        border-color: #4caf50;
+      }
+
+      .message.agent {
+        border-color: #2196f3;
+      }
+
+      .message.ai {
+        border-color: #ff9800;
+      }
+
+      .message.system {
+        border-color: #9e9e9e;
+      }
+
+      .message .timestamp {
+        font-size: 11px;
+        color: #999;
+        margin-bottom: 5px;
+      }
+
+      .message .type {
+        font-weight: 600;
+        font-size: 12px;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .message.user .type {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+      }
+
+      .message.agent .type {
+        background: rgba(33, 150, 243, 0.2);
+        color: #2196f3;
+      }
+
+      .message.ai .type {
+        background: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+      }
+
+      .message.system .type {
+        background: rgba(158, 158, 158, 0.2);
+        color: #9e9e9e;
+      }
+
+      .message .content {
+        font-size: 14px;
+        color: #333;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+      }
+
+      .sender-info {
+        background: #e3f2fd;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        border-left: 4px solid #2196f3;
+      }
+
+      .sender-info strong {
+        color: #1976d2;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .conversation-option {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .conversation-option:hover {
+        background: #f5f5f5;
+      }
+
+      .conversation-option strong {
+        color: #333;
+      }
+
+      .conversation-option small {
+        color: #666;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Teste WebSocket - Chat API</h1>
+
+    <div class="container">
+      <div class="panel">
+        <h2>📡 Conexão WebSocket</h2>
+
+        <div id="connectionStatus" class="status disconnected">
+          ❌ Desconectado
+        </div>
+
+        <div class="form-group">
+          <label>Quem vai conectar?</label>
+          <select id="connectionType" onchange="updateConnectionFields()">
+            <option value="user">Usuário</option>
+            <option value="agent">Agente</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="userIdGroup">
+          <label>ID do Usuário</label>
+          <input
+            type="text"
+            id="userId"
+            value="user-1"
+            placeholder="Digite o ID do usuário..."
+          />
+        </div>
+
+        <div class="form-group hidden" id="agentIdGroup">
+          <label>ID do Agente</label>
+          <input
+            type="text"
+            id="agentId"
+            value="agent-1"
+            placeholder="Digite o ID do agente..."
+          />
+        </div>
+
+        <button id="connectBtn" onclick="connectWebSocket()">Conectar</button>
+        <button
+          id="disconnectBtn"
+          class="danger"
+          style="display: none"
+          onclick="disconnectWebSocket()"
+        >
+          Desconectar
+        </button>
+      </div>
+
+      <div class="panel">
+        <h2>💬 Enviar Mensagem</h2>
+
+        <div class="sender-info">
+          Enviando como: <strong id="currentUserType">-</strong><br />
+          <small id="currentSenderId">ID: -</small>
+        </div>
+
+        <div class="form-group">
+          <label>Quem vai enviar a mensagem?</label>
+          <select
+            id="senderType"
+            onchange="
+              updateSenderFields()
+              updateSendButton()
+            "
+          >
+            <option value="user">Usuário</option>
+            <option value="agent">Agente</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="senderUserIdGroup">
+          <label>ID do Usuário (remetente)</label>
+          <input
+            type="text"
+            id="senderUserId"
+            value="user-1"
+            placeholder="ID do usuário..."
+            oninput="updateSendButton()"
+          />
+        </div>
+
+        <div class="form-group hidden" id="senderAgentIdGroup">
+          <label>ID do Agente (remetente)</label>
+          <input
+            type="text"
+            id="senderAgentId"
+            value="agent-1"
+            placeholder="ID do agente..."
+            oninput="updateSendButton()"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>
+            Carregar Conversas
+            <button
+              onclick="loadConversations()"
+              style="width: auto; margin-left: 10px; padding: 8px 15px"
+            >
+              🔄 Atualizar
+            </button>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Selecione a Conversa</label>
+          <select id="conversationSelect" onchange="selectConversation()">
+            <option value="">-- Selecione uma conversa --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>ID da Conversa</label>
+          <input
+            type="text"
+            id="conversationId"
+            placeholder="ID da conversa..."
+            readonly
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Mensagem</label>
+          <textarea
+            id="messageContent"
+            rows="3"
+            placeholder="Digite sua mensagem..."
+            oninput="updateSendButton()"
+          ></textarea>
+        </div>
+
+        <button onclick="sendMessage()" id="sendBtn" disabled>
+          Enviar Mensagem
+        </button>
+      </div>
+
+      <div class="panel">
+        <h2>📋 Histórico de Mensagens</h2>
+        <div id="messages" class="messages"></div>
+        <button onclick="clearMessages()">Limpar Histórico</button>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script>
+      let socket = null
+      let allConversations = []
+
+      function updateConnectionFields() {
+        const type = document.getElementById('connectionType').value
+
+        if (type === 'user') {
+          document.getElementById('userIdGroup').classList.remove('hidden')
+          document.getElementById('agentIdGroup').classList.add('hidden')
+        } else {
+          document.getElementById('userIdGroup').classList.add('hidden')
+          document.getElementById('agentIdGroup').classList.remove('hidden')
+        }
+      }
+
+      function updateSenderFields() {
+        const type = document.getElementById('senderType').value
+
+        if (type === 'user') {
+          document
+            .getElementById('senderUserIdGroup')
+            .classList.remove('hidden')
+          document.getElementById('senderAgentIdGroup').classList.add('hidden')
+        } else {
+          document.getElementById('senderUserIdGroup').classList.add('hidden')
+          document
+            .getElementById('senderAgentIdGroup')
+            .classList.remove('hidden')
+        }
+      }
+
+      function updateConnectionStatus(status) {
+        const statusDiv = document.getElementById('connectionStatus')
+        const connectBtn = document.getElementById('connectBtn')
+        const disconnectBtn = document.getElementById('disconnectBtn')
+
+        statusDiv.className = 'status ' + status
+
+        switch (status) {
+          case 'connected':
+            statusDiv.innerHTML = '✅ Conectado'
+            connectBtn.style.display = 'none'
+            disconnectBtn.style.display = 'block'
+            break
+          case 'connecting':
+            statusDiv.innerHTML = '⏳ Conectando...'
+            connectBtn.disabled = true
+            break
+          case 'disconnected':
+            statusDiv.innerHTML = '❌ Desconectado'
+            connectBtn.style.display = 'block'
+            disconnectBtn.style.display = 'none'
+            connectBtn.disabled = false
+            break
+        }
+
+        updateSenderDisplay()
+      }
+
+      function updateSenderDisplay() {
+        const userTypeDisplay = document.getElementById('currentUserType')
+        const userIdDisplay = document.getElementById('currentSenderId')
+
+        const type = document.getElementById('senderType').value
+        const id =
+          type === 'user'
+            ? document.getElementById('senderUserId').value
+            : document.getElementById('senderAgentId').value
+
+        userTypeDisplay.textContent = type === 'user' ? 'USUÁRIO' : 'AGENTE'
+        userIdDisplay.textContent = 'ID: ' + (id || '-')
+
+        updateSendButton()
+      }
+
+      function updateSendButton() {
+        const type = document.getElementById('senderType').value
+        const senderId =
+          type === 'user'
+            ? document.getElementById('senderUserId').value
+            : document.getElementById('senderAgentId').value
+        const conversationId = document.getElementById('conversationId').value
+        const content = document.getElementById('messageContent').value
+
+        const sendBtn = document.getElementById('sendBtn')
+
+        if (senderId && conversationId && content) {
+          sendBtn.disabled = false
+        } else {
+          sendBtn.disabled = true
+        }
+      }
+
+      function addMessage(type, content) {
+        const messagesDiv = document.getElementById('messages')
+        const messageDiv = document.createElement('div')
+        messageDiv.className = 'message ' + type
+
+        const timestamp = new Date().toLocaleTimeString('pt-BR')
+
+        let typeLabel = type
+        if (type === 'system') typeLabel = 'SISTEMA'
+        if (type === 'user') typeLabel = 'USUÁRIO'
+        if (type === 'agent') typeLabel = 'AGENTE'
+        if (type === 'ai') typeLabel = 'IA'
+
+        messageDiv.innerHTML =
+          '<div class="timestamp">' +
+          timestamp +
+          '</div>' +
+          '<div class="type">' +
+          typeLabel +
+          '</div>' +
+          '<div class="content">' +
+          JSON.stringify(content, null, 2) +
+          '</div>'
+
+        messagesDiv.appendChild(messageDiv)
+        messagesDiv.scrollTop = messagesDiv.scrollHeight
+      }
+
+      function clearMessages() {
+        document.getElementById('messages').innerHTML = ''
+      }
+
+      async function loadConversations() {
+        try {
+          const response = await fetch(
+            'http://localhost:3000/api/conversations'
+          )
+          allConversations = await response.json()
+
+          const select = document.getElementById('conversationSelect')
+          select.innerHTML =
+            '<option value="">-- Selecione uma conversa --</option>'
+
+          allConversations.forEach(function (conv) {
+            const option = document.createElement('option')
+            option.value = conv.id
+
+            const userName = conv.user
+              ? conv.user.name
+              : 'Usuário não identificado'
+            const agentName = conv.agent
+              ? conv.agent.agentName
+              : 'Não atribuído'
+
+            const label =
+              conv.subject ||
+              'Sem assunto' +
+                ' (Usuário: ' +
+                userName +
+                ', Agente: ' +
+                agentName +
+                ') - ' +
+                conv.status
+
+            option.textContent = label
+            select.appendChild(option)
+          })
+
+          addMessage('system', {
+            message: 'Conversas carregadas',
+            count: allConversations.length,
+          })
+        } catch (error) {
+          addMessage('system', {
+            error: 'Erro ao carregar conversas',
+            message: error.message,
+          })
+        }
+      }
+
+      function selectConversation() {
+        const select = document.getElementById('conversationSelect')
+        const conversationId = select.value
+
+        document.getElementById('conversationId').value = conversationId
+
+        updateSendButton()
+
+        if (conversationId) {
+          const conv = allConversations.find(function (c) {
+            return c.id === conversationId
+          })
+
+          if (conv) {
+            addMessage('system', {
+              message: 'Conversa selecionada',
+              conversation: conv,
+            })
+          }
+        }
+      }
+
+      function connectWebSocket() {
+        const connectionType = document.getElementById('connectionType').value
+        const id =
+          connectionType === 'user'
+            ? document.getElementById('userId').value
+            : document.getElementById('agentId').value
+
+        if (!id) {
+          alert('Por favor, insira um ID de usuário/agente')
+          return
+        }
+
+        if (socket && socket.connected) {
+          socket.disconnect()
+        }
+
+        updateConnectionStatus('connecting')
+
+        try {
+          socket = io('http://localhost:3000', {
+            path: '/socket.io',
+            transports: ['websocket', 'polling'],
+            auth: {
+              type: connectionType,
+              id: id,
+            },
+          })
+
+          socket.on('connect', function () {
+            updateConnectionStatus('connected')
+            addMessage('system', {
+              message: 'Conectado ao servidor!',
+              socketId: socket.id,
+              connectionType: connectionType,
+              userId: id,
+            })
+          })
+
+          socket.on('connect_error', function (error) {
+            updateConnectionStatus('disconnected')
+            addMessage('system', {
+              error: 'Erro na conexão',
+              message: error.message,
+            })
+          })
+
+          socket.on('error', function (error) {
+            addMessage('system', {
+              error: 'Erro no WebSocket',
+              message: error.message,
+            })
+          })
+
+          socket.on('connected', function (data) {
+            addMessage('system', data)
+          })
+
+          socket.on('conversation_created', function (data) {
+            addMessage('system', {
+              message: 'Conversa criada!',
+              data: data,
+            })
+          })
+
+          socket.on('message_sent', function (data) {
+            addMessage(data.senderType || 'user', data)
+          })
+
+          socket.on('new_message', function (data) {
+            addMessage(data.senderType || 'user', data)
+          })
+
+          socket.on('conversations', function (data) {
+            addMessage('system', {
+              message: 'Conversas recebidas via WebSocket',
+              count: data.length,
+            })
+          })
+        } catch (error) {
+          updateConnectionStatus('disconnected')
+          addMessage('system', {
+            error: 'Erro ao conectar',
+            message: error.message,
+          })
+        }
+      }
+
+      function disconnectWebSocket() {
+        if (socket) {
+          socket.disconnect()
+          socket = null
+          updateConnectionStatus('disconnected')
+        }
+      }
+
+      function sendMessage() {
+        const senderType = document.getElementById('senderType').value
+        const senderId =
+          senderType === 'user'
+            ? document.getElementById('senderUserId').value
+            : document.getElementById('senderAgentId').value
+        const conversationId = document.getElementById('conversationId').value
+        const content = document.getElementById('messageContent').value
+
+        if (!senderId) {
+          alert('Por favor, insira o ID do remetente')
+          return
+        }
+
+        if (!conversationId) {
+          alert('Por favor, selecione uma conversa')
+          return
+        }
+
+        if (!content) {
+          alert('Por favor, digite uma mensagem')
+          return
+        }
+
+        // Enviar via API REST para não precisar de WebSocket conectado
+        fetch('http://localhost:3000/api/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversationId: conversationId,
+            senderType: senderType,
+            senderId: senderId,
+            content: content,
+          }),
+        })
+          .then(function (response) {
+            return response.json()
+          })
+          .then(function (data) {
+            addMessage(senderType, {
+              message: 'Mensagem enviada via API REST',
+              data: data,
+            })
+            document.getElementById('messageContent').value = ''
+          })
+          .catch(function (error) {
+            addMessage('system', {
+              error: 'Erro ao enviar mensagem',
+              message: error.message,
+            })
+          })
+      }
+
+      // Inicialização
+      updateConnectionFields()
+      updateSenderFields()
+      updateSenderDisplay()
+      loadConversations()
+    </script>
+  </body>
+</html>
